@@ -1,44 +1,69 @@
-# homeassistant_remote
+# ne0nbanana Home Assistant Remote
 
-Ein ESP32-basiertes Remote zur Steuerung von Home Assistant.
+Eine physische Fernbedienung auf Basis eines ESP32-S3 für eine lokale Home-Assistant-Instanz. Das Projekt kombiniert vier Tasten, ein ILI9225-SPI-Display und eine kontrastreiche gelb-schwarze Terminaloberfläche.
 
-## Ziel
+## Aktueller Stand
 
-Dieses Repository dient als Ausgangspunkt für eine kleine Fernbedienung mit ESP32, die per WLAN mit Home Assistant kommuniziert und z. B. Lichter, Szenen oder Medien steuert.
+Der Breadboard-Prototyp initialisiert Display und Tasten, verbindet sich per WLAN und kann die Licht-Dienste konfigurierter Home-Assistant-Bereiche über die REST-API aufrufen. Das aktuelle, noch fest codierte Menü bietet:
 
-## Geplanter Funktionsumfang
+```text
+Hauptmenü
+├── Licht
+│   ├── Wohnzimmer
+│   │   ├── An
+│   │   └── Aus
+│   └── Arbeitszimmer
+└── Ausschalten
+```
 
-- Verbindung zum WLAN
-- Anbindung an Home Assistant (z. B. REST API oder MQTT)
-- Tasten-/Encoder-Eingaben am ESP32
-- Auslösen von Aktionen in Home Assistant
-- Statusanzeige über kleines Display
+Der REST-Client und die Menüstruktur sind ein Zwischenstand. Für Version 1.0 werden die Firmware modularisiert, Einzellampen und Szenen ergänzt und Zustände über Home Assistants WebSocket-API synchronisiert.
 
-## Voraussetzungen
+## Hardware
 
-- ESP32-S3 mit USB-C
-- 2,2" TFT-Display mit ILI9225, 176 × 220 px, SPI
-- 4× Taster für Up / Down / Enter / Back
-- 1× Ein-/Aus-Schalter
-- 1× 3,7-V-LiPo/Li-Ion-Akku, 560 mAh
-- 1× TP4056-Lademodul mit Akkuschutz (DW01A + 8205A)
-- 1× MT3608 Step-Up-Wandler
-- 1× Schottky-Diode, z. B. 1N5819
-- 1× 220-µF-Elko, 16 V
-- 1× JST-PH-2.0-Stecker, 2-polig
-- 560mAh lipo Akku
-- 1× Lochrasterplatine, ca. 50 × 100 mm
-- Litze / Schaltdraht
-- Lötzinn
+- ESP32-S3-FH4R2 mit USB-C
+- ILI9225-TFT, 176 × 220 Pixel, SPI, Landscape-Betrieb
+- vier Tasten: Up, Down, Enter und Back
+- geplanter Akkubetrieb mit 560-mAh-LiPo/Li-Ion-Zelle
+- geplante Lade- und Versorgungsschaltung mit TP4056 und MT3608
 
-Für den Prototyp zusätzlich:
-- Breadboard
-- Jumper-/Dupont-Kabel
+Aktuelle Taster-Pins: Up GPIO2, Down GPIO3, Enter GPIO4 und Back GPIO5. Vor dem finalen Aufbau wird Down wegen der Strapping-Funktion von GPIO3 auf GPIO6 verlegt. Display: CS GPIO7, RST GPIO8, RS/DC GPIO9, MOSI GPIO10 und CLK GPIO11.
+
+## Bedienung
+
+- Up/Down ändern die Auswahl.
+- Enter öffnet einen Menüpunkt oder führt eine explizite An-/Aus-Aktion aus.
+- Back geht eine Ebene zurück und führt keine Schaltaktion aus.
+- `Ausschalten` im Hauptmenü versetzt den ESP32 in den Tiefschlaf.
+- Zum Aufwecken aus diesem Software-Aus Enter mindestens drei Sekunden halten. Ein kürzerer Druck führt zurück in den Tiefschlaf.
+
+Software-Aus trennt die Versorgung nicht physisch. Ein mechanischer Hauptschalter und die Abschaltung der Displaybeleuchtung gehören noch zum finalen Energiekonzept.
 
 ## Lokale Konfiguration
-
-Kopiere vor dem ersten Build die lokale Konfigurationsvorlage:
 
 ```sh
 cp include/secrets.example.h include/secrets.h
 ```
+
+Anschließend in `include/secrets.h` WLAN, die exakt verifizierte Home-Assistant-Basis-URL und einen widerrufbaren Long-Lived Access Token eintragen. Die Datei ist von Git ausgeschlossen. Zugangsdaten dürfen weder in Commits noch in Logs, Screenshots oder Videos erscheinen.
+
+Die bestätigten Home-Assistant-Bereichs-IDs sind `wohnzimmer` und `arbeitszimmer`. Einzelne Lampen- und Szenen-IDs werden erst für die entsprechenden Entwicklungsphasen ergänzt.
+
+## Build und Flash
+
+Voraussetzung ist eine lokale PlatformIO-Installation.
+
+```sh
+pio run
+pio run -t upload
+pio device monitor -b 115200
+```
+
+Das Projekt verwendet die Umgebung `esp32-s3`. Ein erfolgreicher Build belegt keine Funktion auf der physischen Hardware; Display, Tasten, Netzwerk und Energiemodi müssen am realen Gerät geprüft werden.
+
+## Scope von Version 1.0
+
+Version 1.0 steuert ausschließlich alle Lichter eines konfigurierten Raums, einzelne Lampen und Lichtszenen in Wohnzimmer und Arbeitszimmer. Dimmen, RGB, Mediensteuerung, automatische Discovery, Cloudzugriff und OTA-Updates sind bewusst nicht Teil dieses Releases.
+
+## Lizenz
+
+Der Quellcode steht unter der in [LICENSE](LICENSE) beschriebenen MIT-Lizenz.
