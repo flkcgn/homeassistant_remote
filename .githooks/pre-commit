@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+blocked_paths_pattern='(^|/)(\.pio/|compile_commands\.json$|include/secrets\.h$|\.env($|\.)|[^/]*\.(key|pem|p12|pfx|jks|keystore)$)'
+
+blocked_paths="$({ git diff --cached --name-only --diff-filter=ACMR -z || true; } \
+  | tr '\0' '\n' \
+  | grep -E "$blocked_paths_pattern" || true)"
+
+if [[ -n "$blocked_paths" ]]; then
+  echo "Commit blocked: sensitive or generated paths are staged:" >&2
+  echo "$blocked_paths" >&2
+  exit 1
+fi
+
+staged_patch="$(git diff --cached --no-ext-diff --unified=0 --diff-filter=ACMR -- \
+  ':!include/secrets.example.h' ':!.githooks/pre-commit')"
+
+secret_pattern='^\+.*(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|Authorization[^[:cntrl:]]*Bearer[[:space:]]+[A-Za-z0-9._-]{12,}|(WIFI_PASSWORD|HA_TOKEN)[[:space:]]*=[[:space:]]*"[^"[:space:]]{8,}"|github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16})'
+
+if grep -Eiq "$secret_pattern" <<<"$staged_patch"; then
+  echo "Commit blocked: a staged addition looks like a credential or private key." >&2
+  echo "Move credentials to include/secrets.h and review the staged diff." >&2
+  exit 1
+fi

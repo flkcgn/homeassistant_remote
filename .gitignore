@@ -1,0 +1,30 @@
+# PlatformIO build output and generated tooling files
+.pio/
+compile_commands.json
+
+# Local project caches and editor metadata
+.cache/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local secrets and environment files
+include/secrets.h
+.env
+.env.*
+!.env.example
+secrets.*
+!secrets.example.*
+
+# Private keys and certificates
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Common OS metadata
+.DS_Store
+Thumbs.db
