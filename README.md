@@ -1,69 +1,69 @@
 # ne0nbanana Home Assistant Remote
 
-Eine physische Fernbedienung auf Basis eines ESP32-S3 für eine lokale Home-Assistant-Instanz. Das Projekt kombiniert vier Tasten, ein ILI9225-SPI-Display und eine kontrastreiche gelb-schwarze Terminaloberfläche.
+A physical remote control based on an ESP32-S3 for a local Home Assistant instance. The project combines four buttons, an ILI9225 SPI display, and a high-contrast yellow-on-black terminal-style interface.
 
-## Aktueller Stand
+## Current Status
 
-Der Breadboard-Prototyp initialisiert Display und Tasten, verbindet sich per WLAN und kann die Licht-Dienste konfigurierter Home-Assistant-Bereiche über die REST-API aufrufen. Das aktuelle, noch fest codierte Menü bietet:
+The breadboard prototype initializes the display and buttons, connects via Wi-Fi, and can call the light services of configured Home Assistant areas through the REST API. The current, still hard-coded menu provides:
 
-```text
-Hauptmenü
-├── Licht
-│   ├── Wohnzimmer
-│   │   ├── An
-│   │   └── Aus
-│   └── Arbeitszimmer
-└── Ausschalten
-```
+~~~text
+Main Menu
+├── Lights
+│   ├── Living Room
+│   │   ├── On
+│   │   └── Off
+│   └── Office
+└── Power Off
+~~~
 
-Der REST-Client und die Menüstruktur sind ein Zwischenstand. Für Version 1.0 werden die Firmware modularisiert, Einzellampen und Szenen ergänzt und Zustände über Home Assistants WebSocket-API synchronisiert.
+The REST client and menu structure are an intermediate development stage. For version 1.0, the firmware will be modularized, individual lights and scenes will be added, and states will be synchronized through Home Assistant's WebSocket API.
 
 ## Hardware
 
-- ESP32-S3-FH4R2 mit USB-C
-- ILI9225-TFT, 176 × 220 Pixel, SPI, Landscape-Betrieb
-- vier Tasten: Up, Down, Enter und Back
-- geplanter Akkubetrieb mit 560-mAh-LiPo/Li-Ion-Zelle
-- geplante Lade- und Versorgungsschaltung mit TP4056 und MT3608
+- ESP32-S3-FH4R2 with USB-C
+- ILI9225 TFT, 176 × 220 pixels, SPI, landscape mode
+- four buttons: Up, Down, Enter, and Back
+- planned battery operation using a 560 mAh LiPo/Li-Ion cell
+- planned charging and power circuitry using a TP4056 and MT3608
 
-Aktuelle Taster-Pins: Up GPIO2, Down GPIO3, Enter GPIO4 und Back GPIO5. Vor dem finalen Aufbau wird Down wegen der Strapping-Funktion von GPIO3 auf GPIO6 verlegt. Display: CS GPIO7, RST GPIO8, RS/DC GPIO9, MOSI GPIO10 und CLK GPIO11.
+Current button pins: Up GPIO2, Down GPIO3, Enter GPIO4, and Back GPIO5. Before the final build, Down will be moved from GPIO3 to GPIO6 because GPIO3 is a strapping pin. Display: CS GPIO7, RST GPIO8, RS/DC GPIO9, MOSI GPIO10, and CLK GPIO11.
 
-## Bedienung
+## Controls
 
-- Up/Down ändern die Auswahl.
-- Enter öffnet einen Menüpunkt oder führt eine explizite An-/Aus-Aktion aus.
-- Back geht eine Ebene zurück und führt keine Schaltaktion aus.
-- `Ausschalten` im Hauptmenü versetzt den ESP32 in den Tiefschlaf.
-- Zum Aufwecken aus diesem Software-Aus Enter mindestens drei Sekunden halten. Ein kürzerer Druck führt zurück in den Tiefschlaf.
+- Up/Down changes the current selection.
+- Enter opens a menu item or executes an explicit On/Off action.
+- Back moves up one menu level and never triggers a switching action.
+- `Power Off` in the main menu puts the ESP32 into deep sleep.
+- To wake the device from this software-off state, hold Enter for at least three seconds. A shorter press returns the device to deep sleep.
 
-Software-Aus trennt die Versorgung nicht physisch. Ein mechanischer Hauptschalter und die Abschaltung der Displaybeleuchtung gehören noch zum finalen Energiekonzept.
+Software power-off does not physically disconnect the power supply. A mechanical main power switch and display backlight shutdown are still part of the final power-management design.
 
-## Lokale Konfiguration
+## Local Configuration
 
-```sh
+~~~sh
 cp include/secrets.example.h include/secrets.h
-```
+~~~
 
-Anschließend in `include/secrets.h` WLAN, die exakt verifizierte Home-Assistant-Basis-URL und einen widerrufbaren Long-Lived Access Token eintragen. Die Datei ist von Git ausgeschlossen. Zugangsdaten dürfen weder in Commits noch in Logs, Screenshots oder Videos erscheinen.
+Then add the Wi-Fi credentials, the exactly verified Home Assistant base URL, and a revocable Long-Lived Access Token to `include/secrets.h`. This file is excluded from Git. Credentials must never appear in commits, logs, screenshots, or videos.
 
-Die bestätigten Home-Assistant-Bereichs-IDs sind `wohnzimmer` und `arbeitszimmer`. Einzelne Lampen- und Szenen-IDs werden erst für die entsprechenden Entwicklungsphasen ergänzt.
+The confirmed Home Assistant area IDs are `wohnzimmer` and `arbeitszimmer`. Individual light and scene entity IDs will only be added during their respective development phases.
 
-## Build und Flash
+## Build and Flash
 
-Voraussetzung ist eine lokale PlatformIO-Installation.
+A local PlatformIO installation is required.
 
-```sh
+~~~sh
 pio run
 pio run -t upload
 pio device monitor -b 115200
-```
+~~~
 
-Das Projekt verwendet die Umgebung `esp32-s3`. Ein erfolgreicher Build belegt keine Funktion auf der physischen Hardware; Display, Tasten, Netzwerk und Energiemodi müssen am realen Gerät geprüft werden.
+The project uses the `esp32-s3` environment. A successful build does not prove functionality on the physical hardware; the display, buttons, network connection, and power modes must be tested on the actual device.
 
-## Scope von Version 1.0
+## Version 1.0 Scope
 
-Version 1.0 steuert ausschließlich alle Lichter eines konfigurierten Raums, einzelne Lampen und Lichtszenen in Wohnzimmer und Arbeitszimmer. Dimmen, RGB, Mediensteuerung, automatische Discovery, Cloudzugriff und OTA-Updates sind bewusst nicht Teil dieses Releases.
+Version 1.0 exclusively controls all lights in a configured room, individual lights, and lighting scenes in the Living Room and Office. Dimming, RGB control, media control, automatic discovery, cloud access, and OTA updates are intentionally outside the scope of this release.
 
-## Lizenz
+## License
 
-Der Quellcode steht unter der in [LICENSE](LICENSE) beschriebenen MIT-Lizenz.
+The source code is licensed under the MIT License described in [LICENSE](LICENSE).
