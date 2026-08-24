@@ -12,7 +12,7 @@
 // Buttons
 // =========================
 constexpr int BTN_UP    = 2;
-constexpr int BTN_DOWN  = 3;
+constexpr int BTN_DOWN  = 6;
 constexpr int BTN_ENTER = 4;
 constexpr int BTN_BACK  = 5;
 
@@ -94,8 +94,78 @@ void drawBananaIcon() {
     // Breite ~ 20 px
     tft.fillCircle(198, 14, 8, COLOR_YELLOW);
     tft.fillCircle(194, 14, 8, COLOR_BLACK);
-    tft.fillRectangle(202, 6, 205, 9, COLOR_GREEN);
+    // Stiel an der oberen Spitze der Mondsichel (Kreisueberschneidung liegt
+    // bei x=196, y=6), nicht am rechten Rand des vollen Kreises.
+    tft.fillRectangle(195, 4, 197, 6, COLOR_GREEN);
     tft.fillCircle(206, 18, 2, COLOR_YELLOW);
+}
+
+int menuItemCount() {
+    if (currentScreen == MenuScreen::Rooms) {
+        return AREA_COUNT;
+    }
+    if (currentScreen == MenuScreen::RoomActions) {
+        return ACTION_ITEM_COUNT;
+    }
+    return ROOT_ITEM_COUNT;
+}
+
+void menuItemLabel(int i, char* line, size_t lineSize) {
+    if (currentScreen == MenuScreen::Root) {
+        snprintf(line, lineSize, "%d. %s", i + 1, i == 0 ? "Licht" : "Ausschalten");
+    } else if (currentScreen == MenuScreen::Rooms) {
+        snprintf(
+            line,
+            lineSize,
+            "1.%d %s [%s]",
+            i + 1,
+            areas[i].label,
+            areas[i].isOn ? "AN" : "AUS"
+        );
+    } else {
+        snprintf(
+            line,
+            lineSize,
+            "1.%d.%d %s",
+            selectedRoomIndex + 1,
+            i + 1,
+            i == 0 ? "An" : "Aus"
+        );
+    }
+}
+
+// Zeichnet genau eine Menüzeile. Wird sowohl beim vollen Aufbau (drawUI)
+// als auch beim leichten Update einzelner Zeilen (moveSelection) verwendet,
+// damit UP/DOWN nicht den ganzen Screen neu zeichnen muss.
+void drawMenuItem(int i, bool selected) {
+    int y = 48 + (i * 26);
+
+    char line[48];
+    menuItemLabel(i, line, sizeof(line));
+
+    tft.setFont(Terminal12x16);
+
+    if (selected) {
+        // gelber Balken für Auswahl; drawText fuellt Zeichenzellen immer
+        // komplett mit Vorder- und Hintergrundfarbe, daher Hintergrund
+        // fuer die Dauer dieses Aufrufs auf die Balkenfarbe umstellen.
+        tft.fillRectangle(6, y - 2, 213, y + 15, COLOR_YELLOW);
+        tft.setBackgroundColor(COLOR_YELLOW);
+        tft.drawText(10, y, line, COLOR_BLACK);
+        tft.setBackgroundColor(COLOR_BLACK);
+    } else {
+        tft.fillRectangle(6, y - 2, 213, y + 15, COLOR_BLACK);
+        tft.drawText(10, y, line, COLOR_YELLOW);
+    }
+}
+
+// Bewegt die Auswahl, ohne den ganzen Screen neu zu zeichnen: nur die
+// vorher und die neu markierte Zeile werden aktualisiert.
+void moveSelection(int newIndex) {
+    int oldIndex = selectedIndex;
+    selectedIndex = newIndex;
+    drawMenuItem(oldIndex, false);
+    drawMenuItem(selectedIndex, true);
 }
 
 void drawUI() {
@@ -114,54 +184,9 @@ void drawUI() {
     }
 
     // Menü
-    tft.setFont(Terminal12x16);
-
-    int itemCount = ROOT_ITEM_COUNT;
-    if (currentScreen == MenuScreen::Rooms) {
-        itemCount = AREA_COUNT;
-    } else if (currentScreen == MenuScreen::RoomActions) {
-        itemCount = ACTION_ITEM_COUNT;
-    }
-
+    int itemCount = menuItemCount();
     for (int i = 0; i < itemCount; i++) {
-        int y = 48 + (i * 26);
-
-        char line[48];
-        if (currentScreen == MenuScreen::Root) {
-            snprintf(
-                line,
-                sizeof(line),
-                "%d. %s",
-                i + 1,
-                i == 0 ? "Licht" : "Ausschalten"
-            );
-        } else if (currentScreen == MenuScreen::Rooms) {
-            snprintf(
-                line,
-                sizeof(line),
-                "1.%d %s [%s]",
-                i + 1,
-                areas[i].label,
-                areas[i].isOn ? "AN" : "AUS"
-            );
-        } else {
-            snprintf(
-                line,
-                sizeof(line),
-                "1.%d.%d %s",
-                selectedRoomIndex + 1,
-                i + 1,
-                i == 0 ? "An" : "Aus"
-            );
-        }
-
-        if (i == selectedIndex) {
-            // gelber Balken für Auswahl
-            tft.fillRectangle(6, y - 2, 213, y + 15, COLOR_YELLOW);
-            tft.drawText(10, y, line, COLOR_BLACK);
-        } else {
-            tft.drawText(10, y, line, COLOR_YELLOW);
-        }
+        drawMenuItem(i, i == selectedIndex);
     }
 
     // Footer
@@ -268,16 +293,6 @@ void switchSelectedArea(bool turnOn) {
     drawUI();
 }
 
-int currentItemCount() {
-    if (currentScreen == MenuScreen::Rooms) {
-        return AREA_COUNT;
-    }
-    if (currentScreen == MenuScreen::RoomActions) {
-        return ACTION_ITEM_COUNT;
-    }
-    return ROOT_ITEM_COUNT;
-}
-
 void enterDeepSleep(bool showMessage = true) {
     if (showMessage) {
         setStatus("Ausschalten...");
@@ -335,6 +350,8 @@ bool enterHeldForPowerOn() {
 }
 
 void handleEnter() {
+    Serial.printf("ENTER: screen=%d selectedIndex=%d\n", (int)currentScreen, selectedIndex);
+
     if (currentScreen == MenuScreen::Root) {
         if (selectedIndex == 0) {
             currentScreen = MenuScreen::Rooms;
@@ -360,6 +377,8 @@ void handleEnter() {
 }
 
 void handleBack() {
+    Serial.printf("BACK: screen=%d selectedIndex=%d\n", (int)currentScreen, selectedIndex);
+
     if (currentScreen == MenuScreen::RoomActions) {
         currentScreen = MenuScreen::Rooms;
         selectedIndex = selectedRoomIndex;
@@ -372,6 +391,8 @@ void handleBack() {
         setStatus("Bereits im Hauptmenue");
     }
 
+    Serial.printf("  -> neuer screen=%d selectedIndex=%d\n", (int)currentScreen, selectedIndex);
+
     drawUI();
 }
 
@@ -381,26 +402,33 @@ void handleButtons() {
     bool enter = digitalRead(BTN_ENTER);
     bool back  = digitalRead(BTN_BACK);
 
+    if (up != lastUp || down != lastDown || enter != lastEnter || back != lastBack) {
+        Serial.printf(
+            "RAW up=%d down=%d enter=%d back=%d\n",
+            up, down, enter, back
+        );
+    }
+
     unsigned long now = millis();
 
     if (now - lastButtonMs > debounceMs) {
         if (up == LOW && lastUp == HIGH) {
-            selectedIndex--;
-            if (selectedIndex < 0) {
-                selectedIndex = currentItemCount() - 1;
+            Serial.println("UP");
+            int newIndex = selectedIndex - 1;
+            if (newIndex < 0) {
+                newIndex = menuItemCount() - 1;
             }
-            setStatus("Auswahl geaendert");
-            drawUI();
+            moveSelection(newIndex);
             lastButtonMs = now;
         }
 
         if (down == LOW && lastDown == HIGH) {
-            selectedIndex++;
-            if (selectedIndex >= currentItemCount()) {
-                selectedIndex = 0;
+            Serial.println("DOWN");
+            int newIndex = selectedIndex + 1;
+            if (newIndex >= menuItemCount()) {
+                newIndex = 0;
             }
-            setStatus("Auswahl geaendert");
-            drawUI();
+            moveSelection(newIndex);
             lastButtonMs = now;
         }
 
